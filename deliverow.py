@@ -82,8 +82,15 @@ class ActorCollection(object):
     def __init__(self):
         self.items = list()
 
+    def get_actor(self, dest):
+        actors = [i for i in self.items if i.position == dest]
+        if not actors:
+            return None
+        else:
+            return actors[0]
+
     def is_free(self, dest):
-        return not any(i.position == dest for i in self.items)
+        return self.get_actor(dest) == None
 
 
 actors = ActorCollection()
@@ -129,8 +136,9 @@ class PlayerCharacter(pygame.sprite.Sprite):
         return self.facing[0] + self.position[0], \
             self.facing[1] + self.position[1]
 
+
 class Character(pygame.sprite.Sprite):
-    def __init__(self, sprite, position):
+    def __init__(self, sprite, position, dialogue):
         pygame.sprite.Sprite.__init__(self)
         self.sprite = sprite
         self.image = self.sprite[(DOWN, 0)]
@@ -140,6 +148,8 @@ class Character(pygame.sprite.Sprite):
         self.facing = DOWN
         self.rect.x = 64 * self.position[0]
         self.rect.y = (64 * self.position[1]) - (4 * 4)
+
+        self.dialogue = dialogue
 
 
 class Viewport():
@@ -215,7 +225,7 @@ class Dialogue(pygame.sprite.Sprite):
     
     
 playerCharacter = PlayerCharacter()
-daisyCharacter = Character(daisy_sprites, (8, 20))
+daisyCharacter = Character(daisy_sprites, (8, 20), ["Have you seen my dog?"])
 actors.items.append(daisyCharacter)
 terrain = Terrain()
 viewport = Viewport()
@@ -265,6 +275,9 @@ while not game_exit:
             facing = playerCharacter.get_facing()
             if facing in dialogues:
                 dialogue.set_dialogue(dialogues[facing])
+            actor = actors.get_actor(facing)
+            if actor is not None:
+                dialogue.set_dialogue(actor.dialogue)
         else:
             dialogue.scroll()
     
