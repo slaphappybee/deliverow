@@ -6,7 +6,11 @@ This is a temporary script file.
 """
 
 import pygame
+from pygame import Surface
+from typing import List
 import os
+import time
+import math
 
 DOWN = (0, 1)
 UP = (0, -1)
@@ -24,25 +28,37 @@ dialogues = {
 pygame.font.init() 
 comic_sans = pygame.font.SysFont('Comic Sans MS', 30)
 
+def cut_strip(image: Surface, length: int) -> List[Surface]:
+    surfaces = list()
+
+    for i in range(0, length):
+        s = Surface([16, 16])
+        s.set_colorkey((0, 255, 0))
+        s.blit(image, (0, 0), pygame.Rect(0, 16 * i, 16, 16))
+        surfaces.append(s)
+
+    return surfaces
+
 def cut_character_sprite(image):
+    down, up, left, wdown, wup, wleft = cut_strip(image, 6)
+    
     result = dict()
-    
-    pic_down = pygame.Surface([16, 16])
-    pic_down.set_colorkey((0, 255, 0))
-    pic_down.blit(image, (0, 0), pygame.Rect(0, 0, 16, 16))
-    result[DOWN] = pygame.transform.scale(pic_down, (64, 64))
-    
-    pic_up = pygame.Surface([16, 16])
-    pic_up.set_colorkey((0, 255, 0))
-    pic_up.blit(image, (0, 0), pygame.Rect(0, 16, 16, 16))
-    result[UP] = pygame.transform.scale(pic_up, (64, 64))
-    
-    pic_left = pygame.Surface([16, 16])
-    pic_left.set_colorkey((0, 255, 0))
-    pic_left.blit(pic_lass, (0, 0), pygame.Rect(0, 32, 16, 16))
-    result[LEFT] = pygame.transform.scale(pic_left, (64, 64))
-    
-    result[RIGHT] = pygame.transform.flip(result[LEFT], True, False)
+    result[(DOWN, 0)] = pygame.transform.scale(down, (64, 64))
+    result[(UP, 0)] = pygame.transform.scale(up, (64, 64))
+    result[(LEFT, 0)] = pygame.transform.scale(left, (64, 64))
+    result[(RIGHT, 0)] = pygame.transform.flip(result[(LEFT, 0)], True, False)
+    result[(DOWN, 1)] = pygame.transform.scale(wdown, (64, 64))
+    result[(UP, 1)] = pygame.transform.scale(wup, (64, 64))
+    result[(LEFT, 1)] = pygame.transform.scale(wleft, (64, 64))
+    result[(RIGHT, 1)] = pygame.transform.flip(result[(LEFT, 1)], True, False)
+    result[(DOWN, 2)] = result[(DOWN, 0)]
+    result[(UP, 2)] = result[(UP, 0)]
+    result[(LEFT, 2)] = result[(LEFT, 0)]
+    result[(RIGHT, 2)] = result[(RIGHT, 0)]
+    result[(DOWN, 3)] = pygame.transform.flip(result[(DOWN, 1)], True, False)
+    result[(UP, 3)] = pygame.transform.flip(result[(UP, 1)], True, False)
+    result[(LEFT, 3)] = result[(LEFT, 1)]
+    result[(RIGHT, 3)] = result[(RIGHT, 1)]
     
     return result
 
@@ -59,23 +75,38 @@ with open(os.path.join('pic', 'city.map')) as f:
 class PlayerCharacter(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = lass_sprites[DOWN]
+        self.image = lass_sprites[(DOWN, 0)]
         
         self.rect = self.image.get_rect()
         self.position = (6, 4)
         self.facing = DOWN
         self.rect.x = 64 * 6
-        self.rect.y = (64 * 4)  # - (4 * 4)
+        self.rect.y = (64 * 4) - (4 * 4)
+        self.timeout = 0
+        self.animation_state = 0
     
     def can_go(self, dest):
         return terrain_def[dest[1]][dest[0]] == ' '
 
     def go(self, dest):
         self.position = dest
+
+    def animate(self):
+        self.timeout = 8
+
+    def update(self):
+        if self.timeout > 0:
+            self.timeout -= 1
+            idx_animation = math.floor(self.timeout / 4) % 4
+            idx_modifier = 2 * self.animation_state
+            self.image = lass_sprites[(self.facing, idx_animation + idx_modifier)]
+
+            if self.timeout == 0:
+                self.animation_state = not self.animation_state
     
     def face(self, direction):
         self.facing = direction
-        self.image = lass_sprites[self.facing]
+        self.image = lass_sprites[(self.facing, 0)]
     
     def get_facing(self):
         return self.facing[0] + self.position[0], \
@@ -181,6 +212,7 @@ while not game_exit:
                 playerCharacter.face((-shift[0], -shift[1]))
                 if playerCharacter.can_go((dest_x, dest_y)):
                     terrain.init_move(shift)
+                    playerCharacter.animate()
                     playerCharacter.go((dest_x, dest_y))
                 break
     
@@ -194,10 +226,12 @@ while not game_exit:
             
     background.update()
     overlay.update()
+    playerCharacter.update()
     background.draw(gameDisplay)
     characters.draw(gameDisplay)
     overlay.draw(gameDisplay)
     pygame.display.update()
+    time.sleep(0.02)
 
 pygame.quit()
 quit()
