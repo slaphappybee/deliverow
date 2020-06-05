@@ -6,6 +6,7 @@ This is a temporary script file.
 """
 
 import pygame
+import os
 
 DOWN = (0, 1)
 UP = (0, -1)
@@ -27,14 +28,17 @@ def cut_character_sprite(image):
     result = dict()
     
     pic_down = pygame.Surface([16, 16])
+    pic_down.set_colorkey((0, 255, 0))
     pic_down.blit(image, (0, 0), pygame.Rect(0, 0, 16, 16))
     result[DOWN] = pygame.transform.scale(pic_down, (64, 64))
     
     pic_up = pygame.Surface([16, 16])
+    pic_up.set_colorkey((0, 255, 0))
     pic_up.blit(image, (0, 0), pygame.Rect(0, 16, 16, 16))
     result[UP] = pygame.transform.scale(pic_up, (64, 64))
     
     pic_left = pygame.Surface([16, 16])
+    pic_left.set_colorkey((0, 255, 0))
     pic_left.blit(pic_lass, (0, 0), pygame.Rect(0, 32, 16, 16))
     result[LEFT] = pygame.transform.scale(pic_left, (64, 64))
     
@@ -42,14 +46,14 @@ def cut_character_sprite(image):
     
     return result
 
-pic_lass = pygame.image.load("pic\\lass.png")    
+pic_lass = pygame.image.load(os.path.join('pic', 'lass.png'))
 lass_sprites = cut_character_sprite(pic_lass)
 
-world_map = pygame.image.load("pic\\city.png")
+world_map = pygame.image.load(os.path.join('pic', 'city.png'))
 world_map = pygame.transform.scale(
         world_map, (world_map.get_width() * 4, world_map.get_height() * 4))
 
-with open('pic\\city.map') as f:
+with open(os.path.join('pic', 'city.map')) as f:
     terrain_def = f.readlines()
     
 class PlayerCharacter(pygame.sprite.Sprite):
