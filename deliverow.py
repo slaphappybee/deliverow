@@ -62,8 +62,13 @@ def cut_character_sprite(image):
     
     return result
 
-pic_lass = pygame.image.load(os.path.join('pokered', 'gfx', 'sprites', 'lass.png'))
-lass_sprites = cut_character_sprite(pic_lass)
+def load_sprite(name: str):
+    surface = pygame.image.load(os.path.join('pokered', 'gfx', 'sprites', name + '.png'))
+    sprites = cut_character_sprite(surface)
+    return sprites
+
+lass_sprites = load_sprite('lass')
+daisy_sprites = load_sprite('daisy')
 
 world_map = pygame.image.load(os.path.join('pic', 'city.png'))
 world_map = pygame.transform.scale(
@@ -71,7 +76,19 @@ world_map = pygame.transform.scale(
 
 with open(os.path.join('pic', 'city.map')) as f:
     terrain_def = f.readlines()
-    
+
+
+class ActorCollection(object):
+    def __init__(self):
+        self.items = list()
+
+    def is_free(self, dest):
+        return not any(i.position == dest for i in self.items)
+
+
+actors = ActorCollection()
+
+
 class PlayerCharacter(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
@@ -80,13 +97,13 @@ class PlayerCharacter(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.position = (6, 4)
         self.facing = DOWN
-        self.rect.x = 64 * 6
-        self.rect.y = (64 * 4) - (4 * 4)
+        self.rect.x = 64 * self.position[0]
+        self.rect.y = (64 * self.position[1]) - (4 * 4)
         self.timeout = 0
         self.animation_state = 0
     
     def can_go(self, dest):
-        return terrain_def[dest[1]][dest[0]] == ' '
+        return terrain_def[dest[1]][dest[0]] == ' ' and actors.is_free(dest)
 
     def go(self, dest):
         self.position = dest
@@ -112,28 +129,50 @@ class PlayerCharacter(pygame.sprite.Sprite):
         return self.facing[0] + self.position[0], \
             self.facing[1] + self.position[1]
 
+class Character(pygame.sprite.Sprite):
+    def __init__(self, sprite, position):
+        pygame.sprite.Sprite.__init__(self)
+        self.sprite = sprite
+        self.image = self.sprite[(DOWN, 0)]
+
+        self.rect = self.image.get_rect()
+        self.position = position
+        self.facing = DOWN
+        self.rect.x = 64 * self.position[0]
+        self.rect.y = (64 * self.position[1]) - (4 * 4)
+
+
+class Viewport():
+    def __init__(self):
+        self.sprites = list()
+        self.velocity = (0, 0)
+        self.timeout = 0
+    
+    def add(self, sprite):
+        self.sprites.append(sprite)
+
+    def init_move(self, velocity):
+        self.velocity = velocity
+        self.timeout = 8 
+
+    def is_moving(self):
+        return self.velocity != (0, 0)
+
+    def update(self):
+        if self.timeout > 0:
+            for sprite in self.sprites:
+                sprite.rect.x += 8 * self.velocity[0]
+                sprite.rect.y += 8 * self.velocity[1]
+            self.timeout -= 1
+            if self.timeout == 0:
+                self.velocity = (0, 0)
+
+
 class Terrain(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         self.image = world_map
         self.rect = self.image.get_rect()
-        self.velocity = (0, 0)
-        self.move_counter = 0
-        
-    def is_moving(self):
-        return self.velocity != (0, 0)
-    
-    def init_move(self, velocity):
-        self.velocity = velocity
-        self.move_counter = 8
-    
-    def update(self):
-        if self.move_counter > 0:
-            self.rect.x += 8 * self.velocity[0]
-            self.rect.y += 8 * self.velocity[1]
-            self.move_counter -= 1
-            if self.move_counter == 0:
-                self.velocity = (0, 0)
 
 
 class Dialogue(pygame.sprite.Sprite):
@@ -176,10 +215,15 @@ class Dialogue(pygame.sprite.Sprite):
     
     
 playerCharacter = PlayerCharacter()
+daisyCharacter = Character(daisy_sprites, (8, 20))
+actors.items.append(daisyCharacter)
 terrain = Terrain()
+viewport = Viewport()
+viewport.add(terrain)
+viewport.add(daisyCharacter)
 dialogue = Dialogue()
 
-characters = pygame.sprite.Group(playerCharacter)
+characters = pygame.sprite.Group(playerCharacter, daisyCharacter)
 background = pygame.sprite.Group(terrain)
 overlay = pygame.sprite.Group(dialogue)
 
@@ -203,7 +247,7 @@ while not game_exit:
             game_exit = True
             
     pressed = pygame.key.get_pressed()
-    if not terrain.is_moving() and not dialogue.visible():
+    if not viewport.is_moving() and not dialogue.visible():
         for key in move_mapping.keys():
             if pressed[key]:
                 shift = move_mapping[event.key]
@@ -211,7 +255,7 @@ while not game_exit:
                 dest_y = playerCharacter.position[1] - shift[1]
                 playerCharacter.face((-shift[0], -shift[1]))
                 if playerCharacter.can_go((dest_x, dest_y)):
-                    terrain.init_move(shift)
+                    viewport.init_move(shift)
                     playerCharacter.animate()
                     playerCharacter.go((dest_x, dest_y))
                 break
@@ -223,7 +267,8 @@ while not game_exit:
                 dialogue.set_dialogue(dialogues[facing])
         else:
             dialogue.scroll()
-            
+    
+    viewport.update()
     background.update()
     overlay.update()
     playerCharacter.update()
@@ -231,7 +276,7 @@ while not game_exit:
     characters.draw(gameDisplay)
     overlay.draw(gameDisplay)
     pygame.display.update()
-    time.sleep(0.02)
+    time.sleep(0.01)
 
 pygame.quit()
 quit()
