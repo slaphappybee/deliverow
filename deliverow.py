@@ -33,7 +33,7 @@ def cut_strip(image: Surface, length: int) -> List[Surface]:
 
     for i in range(0, length):
         s = Surface([16, 16])
-        s.set_colorkey((0, 255, 0))
+        s.set_colorkey((255, 255, 255))
         s.blit(image, (0, 0), pygame.Rect(0, 16 * i, 16, 16))
         surfaces.append(s)
 
@@ -62,7 +62,7 @@ def cut_character_sprite(image):
     
     return result
 
-pic_lass = pygame.image.load(os.path.join('pic', 'lass.png'))
+pic_lass = pygame.image.load(os.path.join('pokered', 'gfx', 'sprites', 'lass.png'))
 lass_sprites = cut_character_sprite(pic_lass)
 
 world_map = pygame.image.load(os.path.join('pic', 'city.png'))
